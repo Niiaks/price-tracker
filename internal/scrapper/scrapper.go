@@ -1,15 +1,35 @@
 package scrapper
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/Niiaks/price-tracker/internal/db"
 	"github.com/Niiaks/price-tracker/pkg"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jmoiron/sqlx"
 )
 
-func Scrape(p pkg.Product) {
+type Scrapper struct {
+	*sqlx.DB
+}
+
+func NewScrapper(db *sqlx.DB) *Scrapper {
+	return &Scrapper{DB: db}
+}
+
+func (s *Scrapper) Scrape(ctx context.Context, p pkg.Product) error {
+
+	fmt.Println("Starting to scrape product with id", p.ID)
+	product, err := db.InsertProduct(ctx, s.DB, p)
+	if err != nil {
+		return err
+	}
+
 	// set browser headers to avoid being detected as bot
 	req, _ := http.NewRequest("GET", p.Url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (Chrome/120.0.0.0 Safari/537.36)")
@@ -20,7 +40,7 @@ func Scrape(p pkg.Product) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal("Error getting url", err)
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -29,9 +49,32 @@ func Scrape(p pkg.Product) {
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	price := doc.Find("span[data-price='true']").First().Text()
-	fmt.Println("the price is", price)
+	parsedPrice, err := parseFloat(price)
+	if err != nil {
+		return err
+	}
+
+	priceHistory := pkg.PriceHistory{
+		ProductID: product.ID,
+		Price:     parsedPrice,
+	}
+	err = db.InsertPriceHistory(ctx, s.DB, priceHistory)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Successfully scraped product", product)
+	return nil
+}
+
+func parseFloat(raw string) (float64, error) {
+	cleaned := strings.ReplaceAll(raw, "GH₵", "")
+	cleaned = strings.ReplaceAll(cleaned, " ", "")
+	cleaned = strings.ReplaceAll(cleaned, ",", "")
+	cleaned = strings.TrimSpace(cleaned)
+
+	return strconv.ParseFloat(cleaned, 64)
 }
