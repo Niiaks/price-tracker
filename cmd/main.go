@@ -1,19 +1,29 @@
 package main
 
 import (
-	"fmt"
+	"flag"
+	"log"
+	"os"
 
-	"github.com/Niiaks/price-tracker/internal/scrapper"
-	"github.com/Niiaks/price-tracker/pkg"
+	db2 "github.com/Niiaks/price-tracker/internal/db"
 )
 
-func main() {
-	fmt.Println("price tracker")
+var dsn = flag.String("dsn", "", "dsn to connect to postgresql")
 
-	p := pkg.Product{
-		Name: "iphone",
-		Url:  "https://www.jumia.com.gh/mobile-phones/all-products/apple/#catalog-listing",
+func main() {
+	flag.Parse()
+	if len(flag.Args()) > 0 {
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	scrapper.Scrape(p)
+	if *dsn == "" {
+		*dsn = os.Getenv("DATABASE_URL")
+	}
+
+	_, err := db2.ConnectDB(*dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

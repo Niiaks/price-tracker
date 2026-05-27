@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/Niiaks/price-tracker/pkg"
 	"github.com/PuerkitoBio/goquery"
@@ -33,18 +32,6 @@ func Scrape(p pkg.Product) {
 		log.Fatal(err)
 	}
 
-	doc.Find("a.core").Each(func(i int, s *goquery.Selection) {
-		name := s.Find("h3.name").Text()
-		price := s.Find("div.prc").Text()
-		oldPrice := s.Find("div.old").Text()
-		discount := s.Find("div.bdg._dsct").Text()
-		link, _ := s.Attr("href")
-
-		fmt.Printf("--- Product %d ---\n", i+1)
-		fmt.Printf("Name:     %s\n", strings.TrimSpace(name))
-		fmt.Printf("Price:    %s\n", strings.TrimSpace(price))
-		fmt.Printf("Was:      %s\n", strings.TrimSpace(oldPrice))
-		fmt.Printf("Discount: %s\n", strings.TrimSpace(discount))
-		fmt.Printf("Link:     https://www.jumia.com.gh%s\n\n", link)
-	})
+	price := doc.Find("span[data-price='true']").First().Text()
+	fmt.Println("the price is", price)
 }
