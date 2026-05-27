@@ -11,8 +11,8 @@ type Product struct {
 }
 
 type PriceHistory struct {
-	ID         int       `db:"id"`
-	ProductID  int       `db:"product_id"`
-	Price      float64   `db:"price"`
-	ScrappedAt time.Time `db:"scrapped_at"`
+	ID        int       `db:"id"`
+	ProductID int       `db:"product_id"`
+	Price     float64   `db:"price"`
+	ScrapedAt time.Time `db:"scraped_at"`
 }
