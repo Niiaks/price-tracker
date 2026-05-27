@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/Niiaks/price-tracker/pkg"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -34,4 +36,32 @@ func ConnectDB(dsn string) (*sqlx.DB, error) {
 	db.MustExec(schema)
 
 	return db, nil
+}
+
+func InsertProduct(ctx context.Context, db *sqlx.DB, product pkg.Product) (*pkg.Product, error) {
+	query := `INSERT INTO products(name, url, threshold) 
+          VALUES (:name, :url, :threshold)
+          RETURNING *`
+
+	rows, err := db.NamedQueryContext(ctx, query, product)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.StructScan(&product)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &product, nil
+}
+
+func InsertPriceHistory(ctx context.Context, db *sqlx.DB, price pkg.PriceHistory) error {
+	query := `INSERT INTO price_history(product_id, price) VALUES (:product_id,:price)`
+	_, err := db.NamedExecContext(ctx, query, price)
+	if err != nil {
+		return err
+	}
+	return nil
 }
