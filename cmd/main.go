@@ -5,11 +5,10 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
 
 	db2 "github.com/Niiaks/price-tracker/internal/db"
+	"github.com/Niiaks/price-tracker/internal/scheduler"
 	"github.com/Niiaks/price-tracker/internal/scrapper"
-	"github.com/Niiaks/price-tracker/pkg"
 	"github.com/joho/godotenv"
 )
 
@@ -48,18 +47,13 @@ func main() {
 	}
 
 	s := scrapper.NewScrapper(db)
+	schedule := scheduler.NewScheduler(db, s)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	product := pkg.Product{
-		Name:      *name,
-		Threshold: *threshold,
-		Url:       *url,
-	}
-
-	err = s.Scrape(ctx, product)
+	err = schedule.Start(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 }
