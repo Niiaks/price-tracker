@@ -65,3 +65,14 @@ func InsertPriceHistory(ctx context.Context, db *sqlx.DB, price pkg.PriceHistory
 	}
 	return nil
 }
+
+func GetProducts(ctx context.Context, db *sqlx.DB) ([]pkg.Product, error) {
+	var product []pkg.Product
+	query := `SELECT * FROM products`
+
+	err := db.Select(&product, query)
+	if err != nil {
+		return nil, err
+	}
+	return product, nil
+}
