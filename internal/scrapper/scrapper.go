@@ -3,6 +3,7 @@ package scrapper
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,15 +15,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type Scrapper struct {
+type Scrapper interface {
+	Scrape(ctx context.Context, p pkg.Product) error
+}
+type ScraperService struct {
 	*sqlx.DB
 }
 
-func NewScrapper(db *sqlx.DB) *Scrapper {
-	return &Scrapper{DB: db}
+func NewScrapper(db *sqlx.DB) Scrapper {
+	return &ScraperService{DB: db}
 }
 
-func (s *Scrapper) Scrape(ctx context.Context, p pkg.Product) error {
+func (s *ScraperService) Scrape(ctx context.Context, p pkg.Product) error {
 
 	fmt.Println("Starting to scrape product with id", p.ID)
 	product, err := db.InsertProduct(ctx, s.DB, p)
@@ -42,7 +46,12 @@ func (s *Scrapper) Scrape(ctx context.Context, p pkg.Product) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 	if resp.StatusCode != 200 {
 		log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
 	}
